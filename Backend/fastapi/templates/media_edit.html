@@ -194,7 +194,7 @@
                     Cancel
                 </button>
                 <button type="submit"
-                    class="w-full sm:w-auto theme-primary text-white px-6 py-2 rounded-md hover:opacity-90 transition-opacity text-sm">
+                    class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors text-sm shadow-sm">
                     Save Changes
                 </button>
             </div>
@@ -224,6 +224,11 @@
                     <p class="text-sm text-gray-500 mt-2 sm:mt-1 break-all">{{ quality.name }}</p>
                 </div>
                 <div class="flex gap-2">
+                    <button onclick="copyStreamLink('{{ quality.id }}', '{{ quality.name }}')"
+                        class="self-start sm:self-center text-green-600 hover:text-green-800 hover:bg-green-50 px-3 py-1 rounded transition-colors text-sm"
+                        title="Copy direct stream link">
+                        📋 Copy Link
+                    </button>
                     <button onclick="runSpeedTest('{{ quality.id }}', 'movie', '{{ quality.quality }}')"
                         class="self-start sm:self-center text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1 rounded transition-colors text-sm">
                         🚀 Speed Test
@@ -297,6 +302,12 @@
                                                 <span class="text-xs text-gray-400 break-all">{{ quality.name }}</span>
                                             </div>
                                             <div class="flex gap-2">
+                                                <button
+                                                    onclick="copyStreamLink('{{ quality.id }}', '{{ quality.name }}')"
+                                                    class="self-start sm:self-center text-green-600 hover:text-green-800 hover:bg-green-50 px-2 py-1 rounded transition-colors text-xs"
+                                                    title="Copy direct stream link">
+                                                    📋 Copy
+                                                </button>
                                                 <button
                                                     onclick="runSpeedTest('{{ quality.id }}', 'tv', '{{ quality.quality }}')"
                                                     class="self-start sm:self-center text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors text-xs">
@@ -546,6 +557,34 @@
             }
         });
     });
+
+    // Copy direct stream link to clipboard
+    function copyStreamLink(qualityId, fileName) {
+        // Try to find token from existing manifest URLs on the dashboard,
+        // fall back to prompting the user.
+        const base = window.location.origin;
+
+        // Ask user which token to use (pulled from cookies or prompt)
+        const token = getCopylinkToken();
+        if (!token) {
+            showErrorMessage('No API token found. Please copy the link from the Dashboard page.');
+            return;
+        }
+
+        const encodedName = encodeURIComponent(fileName || 'stream');
+        const url = `${base}/dl/${token}/${qualityId}/${encodedName}`;
+        navigator.clipboard.writeText(url).then(() => {
+            showSuccessMessage('Stream link copied to clipboard!');
+        }).catch(() => {
+            // Fallback: show the URL in a prompt
+            prompt('Copy this stream link:', url);
+        });
+    }
+
+    function getCopylinkToken() {
+        // Check sessionStorage / localStorage for a cached token
+        return sessionStorage.getItem('api_token') || localStorage.getItem('api_token') || null;
+    }
 </script>
 
 <style>

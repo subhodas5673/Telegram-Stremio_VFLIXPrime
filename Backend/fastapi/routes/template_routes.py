@@ -78,7 +78,8 @@ async def dashboard_page(request: Request, _: bool = Depends(require_auth)):
         PRUNE_SECONDS = 3
         for sid, info in list(ACTIVE_STREAMS.items()):
             status = info.get("status")
-            last_ts = info.get("last_ts", info.get("start_ts", now))
+            # Check end_ts first to see when it organically finished
+            last_ts = info.get("end_ts") or info.get("last_ts") or info.get("start_ts", now)
 
             if status in ("cancelled", "error", "finished") and (now - last_ts > PRUNE_SECONDS):
 

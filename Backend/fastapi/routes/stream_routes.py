@@ -208,6 +208,7 @@ async def stream_handler(
         secure_hash=secure_hash,
         token=token,
         token_data=token_data,
+        stream_id_hash=id,
     )
 
 async def media_streamer(
@@ -217,6 +218,7 @@ async def media_streamer(
     secure_hash: str,
     token: str,
     token_data: dict = None,
+    stream_id_hash: str = None,
 ):
     temp_client = multi_clients[min(multi_clients.keys(), key=lambda i: work_loads.get(i, 0) + 3 * client_failures.get(i, 0))]
     if temp_client not in _streamer_by_client:
@@ -252,10 +254,26 @@ async def media_streamer(
     last_part_cut = (end % chunk_size) + 1
     part_count = math.ceil(end / chunk_size) - math.floor(offset / chunk_size)
 
+    from urllib.parse import unquote
+    
     stream_id = secrets.token_hex(8)
+    
+    # Extract original title from the URL path name, fallback to raw name
+    decoded_name = unquote(request.path_params.get("name", ""))
+    
+    # Look up the real title from the database using the Stremio stream_id_hash
+    db_title = None
+    if stream_id_hash:
+        db_title = await db.get_title_by_stream_id(stream_id_hash)
+        LOGGER.info(f"Stream lookup for hash '{stream_id_hash}' returned title: {db_title}")
+        
+    final_title = db_title if db_title else decoded_name
+    
     meta = {
         "request_path": str(request.url.path),
         "client_host": request.client.host if request.client else None,
+        "title": final_title,
+        "user_name": token_data.get("name", "Unknown") if token_data else "Unknown"
     }
 
     prefetch_count = Telegram.PARALLEL
@@ -338,7 +356,8 @@ async def get_stream_stats():
 
     for sid, info in list(ACTIVE_STREAMS.items()):
         status = info.get("status")
-        last_ts = info.get("last_ts", info.get("start_ts", now))
+        # Check end_ts first, which is set when a stream organically finishes
+        last_ts = info.get("end_ts") or info.get("last_ts") or info.get("start_ts", now)
         if status in ("cancelled", "error", "finished"):
             if now - last_ts > PRUNE_SECONDS:
                 try:
@@ -353,6 +372,7 @@ async def get_stream_stats():
                 "stream_id": sid,
                 "msg_id": info.get("msg_id"),
                 "chat_id": info.get("chat_id"),
+                "title": info.get("meta", {}).get("title"),
                 "client_index": info.get("client_index"),
                 "dc_id": info.get("dc_id"),
                 "status": info.get("status"),
@@ -371,6 +391,7 @@ async def get_stream_stats():
                 "stream_id": info.get("stream_id"),
                 "msg_id": info.get("msg_id"),
                 "chat_id": info.get("chat_id"),
+                "title": info.get("meta", {}).get("title"),
                 "client_index": info.get("client_index"),
                 "dc_id": info.get("dc_id"),
                 "status": info.get("status"),

@@ -49,31 +49,40 @@
                 </div>
             </div>
 
-            <!-- Workload Card -->
-            <div class="theme-card rounded-xl border p-6 shadow-sm col-span-1 md:col-span-3 lg:col-span-1">
-                <div class="flex items-center mb-2">
-                    <div class="flex-shrink-0 bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg mr-3">
-                        <i class="fas fa-heartbeat text-sm text-purple-600 dark:text-purple-400"></i>
+        </div>
+
+        <!-- Bot Health & Load - Full Width -->
+        <div class="theme-card rounded-xl border shadow-sm mt-6">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <div class="flex items-center gap-3">
+                    <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                        <i class="fas fa-heartbeat text-purple-600 dark:text-purple-400"></i>
                     </div>
-                    <h3 class="text-sm font-medium text-gray-800 dark:text-gray-200">Bot Health & Load</h3>
+                    <h3 class="text-base font-semibold text-gray-800 dark:text-gray-200">Bot Health & Load</h3>
                 </div>
-                <div id="stat-workloads"
-                    class="text-sm text-gray-600 dark:text-gray-400 space-y-2 mt-2 max-h-32 overflow-y-auto pr-1">
-                    Loading...
-                </div>
+            </div>
+            <div id="stat-workloads" class="divide-y divide-gray-100 dark:divide-gray-800">
+                <div class="px-6 py-4 text-sm text-gray-500">Loading...</div>
             </div>
         </div>
     </div>
 
     <!-- Stream Analytics Section -->
     <div class="mb-10">
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Recent Stream Analytics</h2>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Recent Stream Analytics</h2>
+            <button onclick="clearAnalytics()"
+                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm flex items-center">
+                <i class="fas fa-trash-alt mr-2"></i> Clear Analytics
+            </button>
+        </div>
         <div class="theme-card border rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left">
                     <thead class="text-xs uppercase bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border-b">
                         <tr>
                             <th class="px-6 py-4 font-semibold">Stream ID</th>
+                            <th class="px-6 py-4 font-semibold">Title</th>
                             <th class="px-6 py-4 font-semibold text-center">Bot (DC)</th>
                             <th class="px-6 py-4 font-semibold text-right">Data Transferred</th>
                             <th class="px-6 py-4 font-semibold text-right">Avg / Peak Speed</th>
@@ -84,7 +93,7 @@
                     </thead>
                     <tbody id="analytics-tbody" class="divide-y divide-gray-100 dark:divide-gray-800">
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                                 <i class="fas fa-spinner fa-spin mr-2"></i> Loading analytics...
                             </td>
                         </tr>
@@ -139,20 +148,30 @@
                         if (b.status === 'failing') statusColor = 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
 
                         wlHtml += `
-                            <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-medium text-gray-900 dark:text-white">${b.display_name}</span>
-                                    <span class="text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider ${statusColor}">${b.status}</span>
+                            <div class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-semibold text-gray-900 dark:text-white">${b.display_name}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider ${statusColor}">${b.status}</span>
                                 </div>
-                                <div class="text-right text-xs">
-                                    <div><span class="font-bold text-gray-900 dark:text-white">${b.current_load}</span> streams | <span class="font-bold text-gray-900 dark:text-white">${b.avg_mbps}</span> MB/s</div>
-                                    <div class="${b.failures > 0 ? 'text-red-500 font-medium' : 'text-gray-400'}">${b.failures} recent failures</div>
+                                <div class="flex items-center gap-6 text-sm">
+                                    <div class="text-center">
+                                        <div class="text-xs text-gray-500 mb-0.5">Active Streams</div>
+                                        <div class="font-bold text-gray-900 dark:text-white">${b.current_load}</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-xs text-gray-500 mb-0.5">Avg Speed</div>
+                                        <div class="font-bold text-gray-900 dark:text-white">${b.avg_mbps} <span class="font-normal text-xs text-gray-400">MB/s</span></div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-xs text-gray-500 mb-0.5">Recent Failures</div>
+                                        <div class="font-bold ${b.failures > 0 ? 'text-red-500' : 'text-gray-400'}">${b.failures}</div>
+                                    </div>
                                 </div>
                             </div>
                         `;
                     });
                 } else {
-                    wlHtml = '<div class="p-2 text-center">No bot data</div>';
+                    wlHtml = '<div class="px-6 py-8 text-center text-gray-500">No bot data available</div>';
                 }
                 document.getElementById('stat-workloads').innerHTML = wlHtml;
             }
@@ -170,7 +189,7 @@
                 const streams = data.data.recent;
 
                 if (!streams || streams.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No recent streams recorded.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">No recent streams recorded.</td></tr>';
                     return;
                 }
 
@@ -180,6 +199,7 @@
                     const bytesStr = (s.total_bytes / (1024 * 1024)).toFixed(1) + ' MB';
                     const timeStr = new Date(s.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const durationStr = s.duration_sec ? `${s.duration_sec.toFixed(1)}s` : '—';
+                    const titleStr = s.title || s.meta?.title || '—';
 
                     let statusColor = 'text-green-500';
                     if (s.status === 'error') statusColor = 'text-red-500';
@@ -188,6 +208,7 @@
                     html += `
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <td class="px-6 py-3 font-mono text-xs text-gray-500 truncate max-w-[120px]" title="${s.stream_id}">${s.stream_id}</td>
+                            <td class="px-6 py-3 text-sm font-medium text-gray-800 dark:text-gray-200 max-w-[160px] truncate" title="${titleStr}">${titleStr}</td>
                             <td class="px-6 py-3 text-center">Bot ${s.client_index + 1} <span class="text-xs text-gray-400 ml-1">(DC${s.dc_id})</span></td>
                             <td class="px-6 py-3 text-right font-medium">${bytesStr}</td>
                             <td class="px-6 py-3 text-right font-medium text-gray-700 dark:text-gray-300">${mbpsStr} <span class="text-xs text-gray-500">MB/s</span></td>
@@ -265,6 +286,24 @@
             }
         } catch (err) {
             alert("Error clearing cache.");
+        }
+    }
+
+    async function clearAnalytics() {
+        if (!confirm("Are you sure you want to clear all stream analytics history? This cannot be undone.")) return;
+
+        try {
+            const res = await fetch('/api/admin/clear-analytics', { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                alert(data.message || 'Analytics cleared successfully.');
+                fetchAnalytics();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.detail || 'Failed to clear analytics.');
+            }
+        } catch (err) {
+            alert('Error clearing analytics.');
         }
     }
 

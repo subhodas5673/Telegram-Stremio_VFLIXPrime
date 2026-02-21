@@ -413,7 +413,7 @@ class ByteStreamer:
                     try:
                         producer_task.cancel()
                         await asyncio.wait_for(producer_task, timeout=2.0)
-                    except Exception:
+                    except (Exception, asyncio.CancelledError):
                         pass
 
                 try:
@@ -428,7 +428,7 @@ class ByteStreamer:
                         "end_ts": end_ts,
                         "duration": duration,
                         "avg_mbps": avg_mbps,
-                        "status": entry.get("status", "finished"),
+                        "status": "finished" if entry.get("status") == "active" else entry.get("status", "finished"),
                         "parallelism": parallelism,
                     })
 
@@ -444,10 +444,15 @@ class ByteStreamer:
                     entry["chunk_size"] = chunk_size
                     asyncio.create_task(db.log_stream_stats(entry))
 
-                    try:
-                        RECENT_STREAMS.appendleft(ACTIVE_STREAMS.pop(stream_id))
-                    except KeyError:
-                        pass
+                    async def delayed_pop():
+                        await asyncio.sleep(3)
+                        try:
+                            if stream_id in ACTIVE_STREAMS:
+                                RECENT_STREAMS.appendleft(ACTIVE_STREAMS.pop(stream_id))
+                        except Exception:
+                            pass
+                    
+                    asyncio.create_task(delayed_pop())
                 finally:
                     try:
                         work_loads[client_index] -= 1

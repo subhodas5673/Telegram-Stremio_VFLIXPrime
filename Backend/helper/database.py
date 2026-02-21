@@ -752,6 +752,33 @@ class Database:
         LOGGER.info(f"No document found with tmdb_id {tmdb_id}.")
         return False
 
+    async def get_title_by_stream_id(self, stream_id_hash: str) -> Optional[str]:
+        """Look up the original media title across all storage DBs using the telegram file ID hash.
+        For TV shows, it includes the Season and Episode number in the title."""
+        for i in range(1, self.current_db_index + 1):
+            db = self.dbs[f"storage_{i}"]
+            
+            # Check Movies
+            movie = await db["movie"].find_one({"telegram.id": stream_id_hash})
+            if movie and "telegram" in movie:
+                for t in movie["telegram"]:
+                    if t.get("id") == stream_id_hash:
+                        return movie.get("title")
+
+            # Check TV Shows
+            tv = await db["tv"].find_one({"seasons.episodes.telegram.id": stream_id_hash})
+            if tv and "seasons" in tv:
+                title = tv.get("title", "Unknown Series")
+                for season in tv.get("seasons", []):
+                    for episode in season.get("episodes", []):
+                        for t in episode.get("telegram", []):
+                            if t.get("id") == stream_id_hash:
+                                s_num = season.get("season_number", 0)
+                                e_num = episode.get("episode_number", 0)
+                                return f"{title} S{s_num:02d}E{e_num:02d}"
+
+        return None
+
     async def delete_movie_quality(self, tmdb_id: int, db_index: int, id: str) -> bool:
         db_key = f"storage_{db_index}"
         movie = await self.dbs[db_key]["movie"].find_one({"tmdb_id": tmdb_id})
@@ -1105,6 +1132,7 @@ class Database:
                 "msg_id":      stats.get("msg_id"),
                 "chat_id":     stats.get("chat_id"),
                 "dc_id":       stats.get("dc_id"),
+                "title":       stats.get("meta", {}).get("title"),  # Added title
                 "client_index": stats.get("client_index"),
                 "total_bytes": stats.get("total_bytes", 0),
                 "duration_sec": round(stats.get("duration", 0.0), 2),
@@ -1161,7 +1189,7 @@ class Database:
                 {},
                 {"_id": 0, "stream_id": 1, "client_index": 1, "dc_id": 1,
                  "total_bytes": 1, "duration_sec": 1, "avg_mbps": 1,
-                 "peak_mbps": 1, "status": 1, "logged_at": 1}
+                 "peak_mbps": 1, "status": 1, "logged_at": 1, "title": 1}
             ).sort("logged_at", DESCENDING).limit(limit)
             recent = await recent_cursor.to_list(None)
             for r in recent:
