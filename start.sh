@@ -1,1 +1,1 @@
-python update.py && python -m Backend
+python -m Backend
